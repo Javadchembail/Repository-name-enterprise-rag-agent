@@ -1,0 +1,28 @@
+venv/
+.venv/
+
+.env
+.env.*
+!.env.example
+
+__pycache__/
+*.py[cod]
+*.pyo
+
+.streamlit/secrets.toml
+
+.vscode/
+.idea/
+
+*.log
+
+# Large/noisy source dataset
+DATA/noisy_data/
+processed_data/noisy/
+
+# Evaluation backup/local artifacts
+evals/eval_state_backup.json
+response.txt
+
+# Temporary evaluation repair scripts
+evals/fix_q*.py
