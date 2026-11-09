@@ -9,7 +9,7 @@ class settings:
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
      # --- VECTOR DB (QDRANT) ---
-    QDRANT_URL = os.getenv("QDRANT_CLUSTER_ENDPOINT")
+    QDRANT_URL = os.getenv("QDRANT_URL")
     QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
     QDRANT_COLLECTION_NAME = "enterprise_rag"  #genai
 

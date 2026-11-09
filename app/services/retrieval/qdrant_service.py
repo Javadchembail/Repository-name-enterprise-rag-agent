@@ -1,41 +1,79 @@
+
 import logfire
 from qdrant_client import QdrantClient
-from qdrant_client.http import models
 from app.config import settings
 from app.services.retrieval.embeddings import embed_query
 
 
-# Initialize Qdrant Client
 client = QdrantClient(
     url=settings.QDRANT_URL,
-    api_key=settings.QDRANT_API_KEY
+    api_key=settings.QDRANT_API_KEY,
+    timeout=30,
+    prefer_grpc=False,
 )
 
+
+def test_qdrant_connection():
+    try:
+        collections = client.get_collections()
+        names = [c.name for c in collections.collections]
+
+        if settings.QDRANT_COLLECTION_NAME not in names:
+            raise RuntimeError(
+                f"Collection not found: {settings.QDRANT_COLLECTION_NAME}"
+            )
+
+        info = client.get_collection(settings.QDRANT_COLLECTION_NAME)
+
+        result = {
+            "connected": True,
+            "collection": settings.QDRANT_COLLECTION_NAME,
+            "points": info.points_count,
+            "status": str(info.status),
+        }
+
+        logfire.info("Qdrant connection successful", **result)
+        return result
+
+    except Exception:
+        logfire.exception("Qdrant connection test failed")
+        raise
+
+
 def search_enterprise_knowledge(query: str, limit: int = 8):
-    """
-    Performs a high-precision search in the enterprise knowledge base.
-    Uses the modern query_points interface.
-    """
     try:
         query_vector = embed_query(query)
 
-        # Using query_points - the modern standard for Qdrant
+        if len(query_vector) != 3072:
+            raise ValueError(
+                f"Expected 3072 dimensions, got {len(query_vector)}"
+            )
+
         response = client.query_points(
             collection_name=settings.QDRANT_COLLECTION_NAME,
             query=query_vector,
             limit=limit,
-            with_payload=True # JSON
+            with_payload=True,
         )
 
         results = []
-        for res in response.points:
+
+        for point in response.points:
+            payload = point.payload or {}
+
             results.append({
-                "content": res.payload.get("text", ""),
-                "source": res.payload.get("source", "Unknown"),
-                "score": res.score
+                "content": payload.get("text", ""),
+                "source": payload.get("source", "Unknown"),
+                "score": point.score,
             })
-        
+
+        logfire.info(
+            "Qdrant search completed",
+            result_count=len(results),
+        )
+
         return results
-    except Exception as e:
-        logfire.error(f"❌ Qdrant Search Failed: {e}")
+
+    except Exception:
+        logfire.exception("Qdrant search failed")
         return []
